@@ -3,12 +3,13 @@ package mavencentral
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"text/template"
+
+	log "github.com/cihub/seelog"
 )
 
 const searchEndpoint = "http://search.maven.org/solrsearch/select"
@@ -46,7 +47,12 @@ type centralResponse struct {
 	Response       centralResponseBody   `json:"response"`
 }
 
+// GetArtifact will download an artifact with given GAV and classifier from
+// Maven Central. It returns an io.ReadCloser that represents an active http
+// stream for the given artifact binary data. Caller must close this stream.
 func GetArtifact(groupId, artifactId, version, classifier string) (io.ReadCloser, error) {
+	log.Infof("Fetching %s %s:%s:%s from maven central", classifier, groupId, artifactId, version)
+
 	if queryTemplate == nil {
 		t, err := template.New("query").Parse(templateStr)
 		if err != nil {
@@ -60,7 +66,9 @@ func GetArtifact(groupId, artifactId, version, classifier string) (io.ReadCloser
 	q.Add("rows", "1")
 	q.Add("wt", "json")
 
-	httpResp, err := http.Get(searchEndpoint + "?" + q.Encode())
+	searchUrl := searchEndpoint + "?" + q.Encode()
+	log.Debug("Querying ", searchUrl)
+	httpResp, err := http.Get(searchUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -75,10 +83,10 @@ func GetArtifact(groupId, artifactId, version, classifier string) (io.ReadCloser
 	}
 
 	artifact := resp.Response.Docs[0]
-	filePath := strings.Replace(artifact.GroupId, ".", "/", -1) + "/" + artifact.ArtifactId + "/" + artifact.Version + "/" + artifact.ArtifactId + "-javadoc.jar"
+	filePath := strings.Replace(artifact.GroupId, ".", "/", -1) + "/" + artifact.ArtifactId + "/" + artifact.Version + "/" + artifact.ArtifactId + "-" + artifact.Version + "-javadoc.jar"
 
 	dlUrl := downloadEndpoint + "?filepath=" + url.QueryEscape(filePath)
-	fmt.Println(dlUrl)
+	log.Debug("Downloading ", dlUrl)
 	httpResp, err = http.Get(dlUrl)
 	return httpResp.Body, err
 }

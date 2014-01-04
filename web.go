@@ -3,10 +3,9 @@ package main
 import (
 	"net/http"
 
-	"github.com/samcday/hosted-javadocsets/docset"
-
 	"github.com/codegangsta/martini"
 	"github.com/codegangsta/martini-contrib/render"
+	"github.com/samcday/hosted-javadocsets/docset"
 )
 
 func main() {

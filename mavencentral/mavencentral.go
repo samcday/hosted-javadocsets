@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -19,32 +20,82 @@ const templateStr = `"g:"{{.GroupId}}" AND a:"{{.ArtifactId}}" AND v:"{{.Version
 
 var queryTemplate *template.Template = nil
 
-type centralResponseHeader struct {
+type responseHeader struct {
 	Status int `json:"status"`
 	QTime  int
 	Params map[string]string `json:"params"`
 }
 
-type centralResponseDoc struct {
+type artifact struct {
 	Id         string   `json:"id"`
 	GroupId    string   `json:"g"`
 	ArtifactId string   `json:"a"`
-	Version    string   `json:"v"`
 	Packaging  string   `json:"p"`
-	Timestamp  int      `json:"timestamp"`
-	Tags       []string `json:"tags"`
 	Extensions []string `json:"ec"`
+	Timestamp  int      `json:"timestamp"`
 }
 
-type centralResponseBody struct {
-	NumFound int                  `json:"numFound"`
-	Start    int                  `json:"start"`
-	Docs     []centralResponseDoc `json:"docs"`
+type lookupResponseDoc struct {
+	artifact
+	Version string   `json:"v"`
+	Tags    []string `json:"tags"`
 }
 
-type centralResponse struct {
-	ResponseHeader centralResponseHeader `json:"responseHeader"`
-	Response       centralResponseBody   `json:"response"`
+type lookupResponseBody struct {
+	NumFound int                 `json:"numFound"`
+	Start    int                 `json:"start"`
+	Docs     []lookupResponseDoc `json:"docs"`
+}
+
+type lookupResponse struct {
+	ResponseHeader responseHeader     `json:"responseHeader"`
+	Response       lookupResponseBody `json:"response"`
+}
+
+type searchResponse struct {
+	ResponseHeader responseHeader     `json:"responseHeader"`
+	Response       searchResponseBody `json:"response"`
+}
+
+type searchResponseBody struct {
+	NumFound int            `json:"numFound"`
+	Start    int            `json:"start"`
+	Docs     []SearchResult `json:"docs"`
+}
+
+type SearchResult struct {
+	artifact
+	LatestVersion string   `json:"latestVersion"`
+	RepositoryId  string   `json:"repositoryId"`
+	VersionCount  int      `json:"versionCount"`
+	Text          []string `json:"text"`
+}
+
+// Search executes a keyword query and returns the results.
+func Search(s string, numResults int) ([]SearchResult, error) {
+	log.Infof("Searching maven central for term %s", s)
+
+	q := url.Values{}
+	q.Add("q", s)
+	q.Add("rows", strconv.Itoa(numResults))
+	q.Add("wt", "json")
+
+	searchUrl := searchEndpoint + "?" + q.Encode()
+	log.Debugf("Querying %s", searchUrl)
+	httpResp, err := http.Get(searchUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	defer httpResp.Body.Close()
+	decoder := json.NewDecoder(httpResp.Body)
+
+	var resp searchResponse
+	if err := decoder.Decode(&resp); err != nil {
+		return nil, err
+	}
+
+	return resp.Response.Docs, nil
 }
 
 // GetArtifact will download an artifact with given GAV and classifier from
@@ -74,7 +125,7 @@ func GetArtifact(groupId, artifactId, version, classifier string) (io.ReadCloser
 	}
 	defer httpResp.Body.Close()
 	decoder := json.NewDecoder(httpResp.Body)
-	var resp centralResponse
+	var resp lookupResponse
 	if err := decoder.Decode(&resp); err != nil {
 		return nil, err
 	}

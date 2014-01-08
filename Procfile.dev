@@ -1,2 +1,2 @@
 guard: bundle exec guard
-#brunch: brunch watch
+brunch: node_modules/brunch/bin/brunch watch

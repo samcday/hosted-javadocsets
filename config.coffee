@@ -9,4 +9,4 @@ exports.config =
         'js/app.js': /^app\/scripts/
     stylesheets:
       joinTo:
-        'css/app.css': /^app\/styles/
+        'css/app.css': /^(app|bower_components)/

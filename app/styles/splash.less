@@ -1,0 +1,57 @@
+.splash {
+    text-align: center;
+
+    h1 {
+        margin-bottom: 30px;
+
+        .heart {
+            color: red;
+            font-size: 250%;
+            vertical-align: bottom;
+        }
+    }
+
+    .typeahead, .tt-query, .tt-hint {
+        font-size: 30px;
+        line-height: 45px;
+        height: 45px;
+        outline: none;
+        border: 1px solid #bbb;
+        width: 500px;
+        border-radius: 7px;
+    }
+
+    .tt-hint {
+        color: #ccc;
+    }
+
+    .typeahead:focus {
+        border-color: #333;
+    }
+
+    .tt-dropdown-menu {
+        margin-top: 10px;
+        padding: 7px 0;
+        text-align: left;
+        width: 500px;
+        border: 1px solid #bbb;
+        border-radius: 7px;
+    }
+
+    .tt-suggestion {
+        padding: 5px 10px;
+        line-height: normal;
+
+        .artifact {
+            font-size: 140%;
+        }
+        .latest, .num {
+            float: right;
+            color: #777;
+        }
+
+        &.tt-is-under-cursor {
+            background: #eee;
+        }
+    }
+}

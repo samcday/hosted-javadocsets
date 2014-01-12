@@ -3,11 +3,11 @@ package main
 import (
 	"encoding/json"
 	"html/template"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
 
+	log "github.com/cihub/seelog"
 	"github.com/codegangsta/martini"
 	"github.com/codegangsta/martini-contrib/render"
 	"github.com/samcday/hosted-javadocsets/docset"
@@ -16,6 +16,8 @@ import (
 )
 
 func main() {
+	defer log.Flush()
+
 	m := martini.Classic()
 	m.Use(render.Renderer())
 
@@ -50,24 +52,33 @@ func main() {
 	})
 
 	m.Get("/artifact/:groupId/:artifactId", func(req *http.Request, params martini.Params, r render.Render) {
+		latestVersion, err := mavencentral.GetLatestVersion(params["groupId"], params["artifactId"])
+		if err != nil {
+			panic(err)
+		}
 		feedUrl := feedRoute.URLWith([]string{params["groupId"], params["artifactId"], params["artifactId"]})
 		absoluteFeedUrl := "http://localhost:5000" + feedUrl
 		dashUrl := "dash-feed://" + url.QueryEscape(absoluteFeedUrl)
 
 		view := map[string]interface{}{
-			"Id":         "com.google.guava:guava",
-			"ArtifactId": params["artifactId"],
-			"URL":        feedUrl,
-			"DashURL":    template.URL(dashUrl),
+			"Id":            "com.google.guava:guava",
+			"ArtifactId":    params["artifactId"],
+			"URL":           feedUrl,
+			"LatestVersion": latestVersion,
+			"DashURL":       template.URL(dashUrl),
 		}
 		r.HTML(200, "artifact", view, render.HTMLOptions{
 			Layout: "layout",
 		})
 	})
 
-	feedRoute = m.Get("/feed/:groupId/Hosted_Javadocset_-_:artifactId.xml", func(r render.Render, params martini.Params, logger *log.Logger) {
-		if err := jobs.QueueDocsetJob(params["groupId"], params["artifactId"], ""); err != nil {
-			logger.Printf("Failed to queue docset job:", err)
+	feedRoute = m.Get("/feed/:groupId/Hosted_Javadocset_-_:artifactId.xml", func(r render.Render, params martini.Params) {
+		latestVersion, err := mavencentral.GetLatestVersion(params["groupId"], params["artifactId"])
+		if err != nil {
+			panic(err)
+		}
+		if err := jobs.QueueDocsetJob(params["groupId"], params["artifactId"], latestVersion); err != nil {
+			log.Error("Failed to queue docset job", err)
 		}
 		r.HTML(200, "docset-feed", map[string]string{
 			"Version":   "4.3.2.1",

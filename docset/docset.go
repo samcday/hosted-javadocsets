@@ -14,7 +14,9 @@ import (
 	"github.com/samcday/hosted-javadocsets/mavencentral"
 )
 
-func Create(groupId, artifactId, version string, w io.Writer) error {
+func Create(groupId, artifactId, version string, w io.WriteCloser) error {
+	defer w.Close()
+
 	log.Infof("Creating docset for %s:%s:%s", groupId, artifactId, version)
 	stream, err := mavencentral.GetArtifact(groupId, artifactId, version, "javadoc")
 	if err != nil {

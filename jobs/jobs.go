@@ -6,8 +6,7 @@ import (
 )
 
 // QueueDocsetJob will queue a job to build a docset for an artifact, if there
-// is not yet one built. If version is nil then a docset for any version of the
-// artifact will be acceptable.
+// is not yet one built.
 func QueueDocsetJob(groupId, artifactId string, version string) error {
 	var redisConn redis.Conn = redisconn.Get()
 
@@ -27,8 +26,10 @@ func QueueDocsetJob(groupId, artifactId string, version string) error {
 	}
 
 	if err := QueueJob(map[string]string{
+		"Job":        "build-docset",
 		"ArtifactId": artifactId,
 		"GroupId":    groupId,
+		"Version":    version,
 	}); err != nil {
 		return err
 	}

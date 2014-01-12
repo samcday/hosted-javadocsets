@@ -9,8 +9,11 @@ import (
 )
 
 type Job struct {
-	Payload  func() map[string]string
+	Payload func() map[string]string
+	// Complete marks the job as complete and deletes it from job server.
 	Complete func()
+	// Release marks the job as needing a retry after specified delay.
+	Release func(delay time.Duration)
 }
 
 // QueueJob will queue up a job in beanstalk with given payload.
@@ -25,7 +28,7 @@ func QueueJob(payload map[string]string) error {
 		return err
 	}
 
-	_, err = beanstalkConn.Put(b, 1, 0, 0)
+	_, err = beanstalkConn.Put(b, 1, 0, 30*time.Second)
 	return err
 }
 
@@ -58,6 +61,9 @@ func TakeJob(timeout time.Duration) (*Job, error) {
 		},
 		Complete: func() {
 			_ = beanstalkConn.Delete(id)
+		},
+		Release: func(delay time.Duration) {
+			_ = beanstalkConn.Release(id, 1, delay)
 		},
 	}, nil
 }

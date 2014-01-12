@@ -21,6 +21,7 @@ GEM
       dotenv (>= 0.7)
       thor (>= 0.13.6)
     formatador (0.2.4)
+    growl (1.0.3)
     guard (2.2.5)
       formatador (>= 0.2.4)
       listen (~> 2.1)
@@ -50,4 +51,5 @@ PLATFORMS
 
 DEPENDENCIES
   foreman
+  growl
   guard-go!
